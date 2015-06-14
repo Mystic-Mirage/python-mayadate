@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from types import IntType, NoneType
 
 
@@ -29,6 +29,11 @@ def _check_longcount_fields(piktun, baktun, katun, tun, uinal, kin):
         raise ValueError('kin must be in 0..19', kin)
 
 
+def _cmperror(x, y):
+    raise TypeError("can't compare '%s' to '%s'" % (
+                    x.__class__.__name__, y.__class__.__name__))
+
+
 class _PicklableMixin:
 
     def __reduce__(self):
@@ -57,6 +62,11 @@ class Correlation(object):
 
     def __repr__(self):
         return '%s.%s(%d)' % (__name__, self.__class__.__name__, self._jdn)
+
+    def __eq__(self, other):
+        if isinstance(other, Correlation):
+            return int(self) == int(other)
+        _cmperror(self, other)
 
     def __reduce__(self):
         return self.__class__, (self._jdn,)
@@ -91,6 +101,11 @@ class Haab(_PicklableMixin, object):
     def __str__(self):
         return '%d %s' % (self._h2, _HAABNAMES[self._h1])
 
+    def __eq__(self, other):
+        if isinstance(other, Haab):
+            return self.tuple() == other.tuple()
+        _cmperror(self, other)
+
 
 _TZOLKINNAMES = ("Imix'", "Ik'", "Ak'b'al", "K'an", "Chikchan", "Kimi",
                  "Manik'", "Lamat", "Muluk", "Ok", "Chuwen", "Eb'", "B'en",
@@ -120,6 +135,11 @@ class Tzolkin(_PicklableMixin, object):
 
     def __str__(self):
         return '%d %s' % (self._t2, _TZOLKINNAMES[self._t1])
+
+    def __eq__(self, other):
+        if isinstance(other, Tzolkin):
+            return self.tuple() == other.tuple()
+        _cmperror(self, other)
 
 
 _RATES = (2880000, 144000, 7200, 360, 20, 1)
@@ -219,6 +239,32 @@ class LongCount(_PicklableMixin, object):
 
     def __str__(self):
         return '.'.join(map(str, self.tuple()))
+
+    def _cmp(self, other):
+        if isinstance(other, (date, datetime)):
+            other = LongCount.fromdate(other)
+        elif not isinstance(other, (LongCount, MayaDate)):
+            _cmperror(self, other)
+        x, y = self.tuple(), other.tuple()
+        return 0 if x == y else 1 if x > y else -1
+
+    def __eq__(self, other):
+        return self._cmp(other) == 0
+
+    def __ne__(self, other):
+        return self._cmp(other) != 0
+
+    def __le__(self, other):
+        return self._cmp(other) <= 0
+
+    def __lt__(self, other):
+        return self._cmp(other) < 0
+
+    def __ge__(self, other):
+        return self._cmp(other) >= 0
+
+    def __gt__(self, other):
+        return self._cmp(other) > 0
 
 
 class MayaDate(LongCount):
