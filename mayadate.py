@@ -29,6 +29,12 @@ def _check_longcount_fields(piktun, baktun, katun, tun, uinal, kin):
         raise ValueError('kin must be in 0..19', kin)
 
 
+class _PicklableMixin:
+
+    def __reduce__(self):
+        return self.__class__, self.tuple()
+
+
 class Correlation(object):
 
     __slots__ = '_jdn'
@@ -52,13 +58,16 @@ class Correlation(object):
     def __repr__(self):
         return '%s.%s(%d)' % (__name__, self.__class__.__name__, self._jdn)
 
+    def __reduce__(self):
+        return self.__class__, (self._jdn,)
+
 
 _HAABNAMES = ("Pop", "Wo", "Sip", "Sotz'", "Tzek", "Xul", "Yaxk'", "Mol",
               "Ch'en", "Yax", "Sac", "Keh", "Mak", "K'ank'in", "Muwan", "Pax",
               "K'ayab'", "Kumk'u", "Wayeb'")
 
 
-class Haab(object):
+class Haab(_PicklableMixin, object):
 
     def __new__(cls, h1, h2):
         self = object.__new__(cls)
@@ -70,6 +79,9 @@ class Haab(object):
         d = l.toordinal()
         h1, h2 = divmod((d + 348) % 365, 20)
         return cls(h1, h2)
+
+    def tuple(self):
+        return self._h1, self._h2
 
     def __repr__(self):
         return '%s.%s(%d, %d)' % (
@@ -85,7 +97,7 @@ _TZOLKINNAMES = ("Imix'", "Ik'", "Ak'b'al", "K'an", "Chikchan", "Kimi",
                  "Ix", "Men", "K'ib'", "Kab'an", "Etz'nab'", "Kawak", "Ajaw")
 
 
-class Tzolkin(object):
+class Tzolkin(_PicklableMixin, object):
 
     def __new__(cls, t1, t2):
         self = object.__new__(cls)
@@ -97,6 +109,9 @@ class Tzolkin(object):
         d = l.toordinal()
         t1, t2 = (d + 19) % 20, (d + 3) % 13 + 1
         return cls(t1, t2)
+
+    def tuple(self):
+        return self._t1, self._t2
 
     def __repr__(self):
         return '%s.%s(%d, %d)' % (
@@ -110,7 +125,7 @@ class Tzolkin(object):
 _RATES = (2880000, 144000, 7200, 360, 20, 1)
 
 
-class LongCount(object):
+class LongCount(_PicklableMixin, object):
     correlation = Correlation.gmt()
 
     __slots__ = '_p', '_b', '_k', '_t', '_u', '_n'
