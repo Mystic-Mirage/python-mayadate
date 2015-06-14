@@ -174,18 +174,6 @@ class LongCount(_PicklableMixin, object):
     def piktun(self):
         return 0 if self._p is None else self._p
 
-    def toordinal(self):
-        s = 0
-        for i, j in zip(reversed(self.tuple()), reversed(_RATES)):
-            s += i * j
-        return s
-
-    def tuple(self):
-        if self._p is None:
-            return self._b, self._k, self._t, self._u, self._n
-        else:
-            return self._p, self._b, self._k, self._t, self._u, self._n
-
     @property
     def baktun(self):
         return self._b
@@ -210,6 +198,18 @@ class LongCount(_PicklableMixin, object):
         c = self.correlation if correlation is None else correlation
         o = self.toordinal() - 1721425 + int(c)
         return date.fromordinal(o)
+
+    def toordinal(self):
+        s = 0
+        for i, j in zip(reversed(self.tuple()), reversed(_RATES)):
+            s += i * j
+        return s
+
+    def tuple(self):
+        if self._p is None:
+            return self._b, self._k, self._t, self._u, self._n
+        else:
+            return self._p, self._b, self._k, self._t, self._u, self._n
 
     def __repr__(self):
         return '%s.%s(%s)' % (
