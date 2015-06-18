@@ -33,9 +33,13 @@ def _cmp(x, y):
     return 0 if x == y else 1 if x > y else -1
 
 
+def _calcerror(x):
+    raise TypeError("unsupported opperand type: '%s'" % x.__class__.__name__)
+
+
 def _cmperror(x, y):
-    raise TypeError("can't compare '%s' to '%s'" % (
-                    x.__class__.__name__, y.__class__.__name__))
+    raise TypeError("can't compare '%s' to '%s'" % (x.__class__.__name__,
+                                                    y.__class__.__name__))
 
 
 class _ComparisonMixin:
@@ -61,6 +65,11 @@ class _ComparisonMixin:
 
 class _ComparisonMixin2:
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.tuple() == other.tuple()
+        _cmperror(self, other)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -68,7 +77,6 @@ class _ComparisonMixin2:
         raise NotImplementedError("Can't do such thing")
 
     __lt__ = __ge__ = __gt__ = __le__
-
 
 
 class _PicklableMixin:
@@ -101,9 +109,20 @@ class Correlation(_ComparisonMixin, object):
         return '%s.%s(%d)' % (__name__, self.__class__.__name__, self._jdn)
 
     def _cmp(self, other):
-        if isinstance(other, Correlation):
+        if isinstance(other, self.__class__):
             return _cmp(self._jdn, other._jdn)
         _cmperror(self, other)
+
+    def __add__(self, other):
+        if isinstance(other, timedelta):
+            return self.__class__(self._jdn + other.days)
+        _calcerror(other)
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        if isinstance(other, timedelta):
+            return self + timedelta(-other.days)
 
     def __reduce__(self):
         return self.__class__, (self._jdn,)
@@ -137,11 +156,6 @@ class Haab(_ComparisonMixin2, _PicklableMixin, object):
     def __str__(self):
         return '%d %s' % (self._h2, _HAABNAMES[self._h1])
 
-    def __eq__(self, other):
-        if isinstance(other, Haab):
-            return self.tuple() == other.tuple()
-        _cmperror(self, other)
-
 
 _TZOLKINNAMES = ("Imix'", "Ik'", "Ak'b'al", "K'an", "Chikchan", "Kimi",
                  "Manik'", "Lamat", "Muluk", "Ok", "Chuwen", "Eb'", "B'en",
@@ -170,11 +184,6 @@ class Tzolkin(_ComparisonMixin2, _PicklableMixin, object):
 
     def __str__(self):
         return '%d %s' % (self._t2, _TZOLKINNAMES[self._t1])
-
-    def __eq__(self, other):
-        if isinstance(other, Tzolkin):
-            return self.tuple() == other.tuple()
-        _cmperror(self, other)
 
 
 _RATES = (2880000, 144000, 7200, 360, 20, 1)
@@ -276,10 +285,27 @@ class LongCount(_ComparisonMixin, _PicklableMixin, object):
     def _cmp(self, other):
         if isinstance(other, (date, datetime)):
             other = LongCount.fromdate(other)
-        elif not isinstance(other, (LongCount, MayaDate)):
-            _cmperror(self, other)
-        return _cmp(self.tuple(), other.tuple())
+        elif isinstance(other, (LongCount, MayaDate)):
+            return _cmp(self.tuple(), other.tuple())
+        _cmperror(self, other)
 
+    def __add__(self, other):
+        if isinstance(other, timedelta):
+            days1 = self.toordinal()
+            days2 = other.days
+            return self.__class__.fromordinal(days1 + days2)
+        _calcerror(other)
+
+    __radd__ = __add__
+
+    def __sub__(self, other):
+        if isinstance(other, timedelta):
+            return self + timedelta(-other.days)
+        elif isinstance(other, (date, datetime, LongCount, MayaDate)):
+            days1 = self.toordinal()
+            days2 = other.toordinal()
+            return timedelta(days1 - days2)
+        _calcerror(other)
 
 class MayaDate(LongCount):
 

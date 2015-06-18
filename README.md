@@ -41,9 +41,7 @@ datetime.date(103, 5, 19)
 
 TODO:
 -----
-* add computaion and comparsions
 * add year bearer
 * add lord of night
 * replace() method
-* pickle support
 * publish on PyPI
